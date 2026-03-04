@@ -40,4 +40,15 @@ public class Vine : MonoBehaviour
         lineRenderer.SetPosition(0, transform.position);
         lineRenderer.SetPosition(1, transform.position + Vector3.up * currentHeight);
     }
+
+    private void OnDestroy()
+    {
+        if (lineRenderer != null)
+        {
+            // reset the renderer so that leftover lines don't remain after the vine
+            // component is removed (e.g. when the player respawns).
+            lineRenderer.SetPosition(0, transform.position);
+            lineRenderer.SetPosition(1, transform.position);
+        }
+    }
 }

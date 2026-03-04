@@ -1,5 +1,9 @@
 using UnityEngine;
 
+
+/// Handles the player's watering action.  It expects to be passed the
+/// GameObject that represents the planted seed.
+
 public class Watering : MonoBehaviour
 {
     public void WaterSeed(GameObject seed)
@@ -7,23 +11,10 @@ public class Watering : MonoBehaviour
         if (seed == null)
             return;
 
-        // Check if the seed has a Seed component
-        Seed seedComponent = seed.GetComponent<Seed>();
-        if (seedComponent != null && !seedComponent.IsWatered)
-        {
-            seedComponent.IsWatered = true;
-            ConvertSeedToVine(seed);
-        }
-    }
-
-    private void ConvertSeedToVine(GameObject seed)
-    {
-        // Add vine component or change sprite/model
-        Vine vineComponent = seed.AddComponent<Vine>();
-        
-        // Remove or disable seed component
         Seed seedComponent = seed.GetComponent<Seed>();
         if (seedComponent != null)
-            Destroy(seedComponent);
+        {
+            seedComponent.Water();
+        }
     }
 }

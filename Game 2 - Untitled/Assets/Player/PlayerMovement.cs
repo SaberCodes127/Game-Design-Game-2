@@ -15,6 +15,7 @@ public class PlayerMovement : MonoBehaviour
     public Transform groundCheckPos;
     public Vector2 groundCheckSize = new Vector2(0.5f, 0.05f);
     public LayerMask groundLayer;
+    bool isFacingRight = true;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -26,6 +27,8 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         rb.linearVelocity = new Vector2(horizontalMovement * moveSpeed, rb.linearVelocity.y);
+
+        FlipSprite();
     }
 
     public void Move(InputAction.CallbackContext context)
@@ -48,5 +51,16 @@ public class PlayerMovement : MonoBehaviour
     private void OnDrawGizmosSelected() {
         Gizmos.color = Color.white;
         Gizmos.DrawCube(groundCheckPos.position, groundCheckSize);
+    }
+
+    void FlipSprite()
+    {
+        if (isFacingRight && horizontalMovement < 0f || !isFacingRight && horizontalMovement > 0f)
+        {
+            isFacingRight = !isFacingRight;
+            Vector3 ls = transform.localScale;
+            ls.x = -ls.x;
+            transform.localScale = ls;
+        }
     }
 }
