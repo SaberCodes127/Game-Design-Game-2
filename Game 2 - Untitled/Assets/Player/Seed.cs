@@ -32,9 +32,9 @@ public class Seed : MonoBehaviour
         GameEvents.OnPlayerRespawn -= ResetToSeed;
     }
 
-    /// <summary>
+  
     /// Called by a watering system when the player waters this object.
-    /// </summary>
+   
     public void Water()
     {
         if (IsWatered)

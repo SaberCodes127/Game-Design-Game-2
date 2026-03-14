@@ -1,29 +1,27 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "ScriptableObjects/Item")]
+[CreateAssetMenu(fileName = "New Item", menuName = "Inventory/Item")]
 public class Item : ScriptableObject
 {
-   [Header("Gameplay")]
+    public enum ItemType
+    {
+        Seed,
+        Tool,
+        Weapon
+    }
+
+    public enum ActionType
+    {
+        None,
+        Water,
+        Plant,
+        Attack
+    }
+
+    public string itemName;
+    public Sprite sprite; // Changed from icon to sprite to match existing assets
     public ItemType type;
     public ActionType actionType;
-    public Sprite sprite;
-
-    [Header("Only UI")]
     public bool stackable = true;
-
-
-}
-
-public enum ItemType
-{
-    Seed,
-    WateringCan,
-    Weapon,
-}
-
-public enum ActionType
-{
-    None,
-    Water,
-    Attack,
+    public int maxStackSize = 99;
 }
