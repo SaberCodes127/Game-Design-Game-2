@@ -1,22 +1,58 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
-public class InventorySlot : MonoBehaviour
+public class InventorySlot : MonoBehaviour, IDropHandler
 {
-    public Image backgroundImage; // The slot background (always visible)
-    public Image itemImage; // The item icon (overlays on top)
+    public Image backgroundImage;
+    public Image itemImage;
     public TextMeshProUGUI countText;
     private Item currentItem;
     private int currentCount;
+
+    public void OnDrop(PointerEventData eventData)
+    {
+        if (eventData.pointerDrag == null) return;
+
+        InventoryItem droppedItem = eventData.pointerDrag.GetComponent<InventoryItem>();
+        if (droppedItem == null) return;
+
+        // Swap if slot already has an item
+        InventoryItem existingItem = GetComponentInChildren<InventoryItem>();
+        if (existingItem != null && existingItem != droppedItem)
+        {
+            // Send existing item back to where the dropped item came from
+            existingItem.transform.SetParent(droppedItem.parentAfterDrag);
+            existingItem.transform.SetSiblingIndex(droppedItem.siblingIndexAfterDrag);
+            FitToSlot(existingItem.GetComponent<RectTransform>());
+        }
+
+        // Move dropped item into this slot
+        droppedItem.parentAfterDrag = transform;
+        droppedItem.transform.SetParent(transform);
+        droppedItem.transform.SetSiblingIndex(0);
+        FitToSlot(droppedItem.GetComponent<RectTransform>());
+    }
+
+    // Forces the item to perfectly fill the slot
+    private void FitToSlot(RectTransform rt)
+    {
+        if (rt == null) return;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.sizeDelta = Vector2.zero;
+        rt.anchoredPosition = Vector2.zero;
+        rt.localScale = Vector3.one;
+    }
 
     private void Awake()
     {
         if (backgroundImage == null)
             backgroundImage = GetComponent<Image>();
+
         if (itemImage == null)
         {
-            // Try to find itemImage as a child
             Image[] images = GetComponentsInChildren<Image>();
             foreach (Image img in images)
             {
@@ -27,16 +63,9 @@ public class InventorySlot : MonoBehaviour
                 }
             }
         }
-        if (countText == null)
-        {
-            countText = GetComponentInChildren<TextMeshProUGUI>();
-            if (countText == null)
-            {
-                Debug.LogWarning($"InventorySlot: No TextMeshProUGUI found on {gameObject.name} or its children!");
-            }
-        }
 
-        Debug.Log($"InventorySlot Awake: backgroundImage={backgroundImage}, itemImage={itemImage}, countText={countText}");
+        if (countText == null)
+            countText = GetComponentInChildren<TextMeshProUGUI>();
     }
 
     public void SetItem(Item item, int count)
@@ -44,17 +73,10 @@ public class InventorySlot : MonoBehaviour
         currentItem = item;
         currentCount = count;
 
-        Debug.Log($"InventorySlot: Setting item {item?.name}, count: {count}, stackable: {item?.stackable}");
-
         if (itemImage != null && item.sprite != null)
         {
             itemImage.sprite = item.sprite;
             itemImage.enabled = true;
-            Debug.Log("InventorySlot: Item image set successfully");
-        }
-        else
-        {
-            Debug.LogWarning($"InventorySlot: itemImage is null or item.sprite is null. itemImage: {itemImage}, sprite: {item?.sprite}");
         }
 
         if (countText != null)
@@ -63,17 +85,11 @@ public class InventorySlot : MonoBehaviour
             {
                 countText.text = count.ToString();
                 countText.enabled = true;
-                Debug.Log($"InventorySlot: Count text set to {count}");
             }
             else
             {
                 countText.enabled = false;
-                Debug.Log($"InventorySlot: Count text disabled (stackable: {item?.stackable}, count: {count})");
             }
-        }
-        else
-        {
-            Debug.LogWarning("InventorySlot: countText is null!");
         }
     }
 
@@ -81,21 +97,10 @@ public class InventorySlot : MonoBehaviour
     {
         currentItem = null;
         currentCount = 0;
-
-        if (itemImage != null)
-            itemImage.enabled = false;
-
-        if (countText != null)
-            countText.enabled = false;
+        if (itemImage != null) itemImage.enabled = false;
+        if (countText != null) countText.enabled = false;
     }
 
-    public Item GetItem()
-    {
-        return currentItem;
-    }
-
-    public int GetCount()
-    {
-        return currentCount;
-    }
+    public Item GetItem() => currentItem;
+    public int GetCount() => currentCount;
 }

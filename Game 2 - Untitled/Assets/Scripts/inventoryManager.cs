@@ -1,136 +1,121 @@
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class InventoryManager : MonoBehaviour
 {
     public static InventoryManager Instance { get; private set; }
 
-    [Header("Toolbar Settings")]
-    public int toolbarSize = 6;
-    public InventorySlot[] toolbarSlots;
+    [Header("Inventory Settings")]
+    [SerializeField] private int maxSlots = 20;
+    [SerializeField] private Transform slotContainer;
+    [SerializeField] private GameObject inventorySlotPrefab;
+    [SerializeField] private GameObject inventoryItemPrefab;
 
-    private Dictionary<Item, int> inventory = new Dictionary<Item, int>();
+    [HideInInspector] public InventorySlot[] toolbarSlots;
+
+    private List<InventorySlot> slots = new();
+    private int selectedSlotIndex = 0;
 
     private void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+            return;
         }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
-    private void Start()
+    public void RegisterSlots(InventorySlot[] newSlots)
     {
-        // Initialize toolbar slots if not set
-        if (toolbarSlots == null || toolbarSlots.Length == 0)
-        {
-            toolbarSlots = GetComponentsInChildren<InventorySlot>();
-        }
+        slots.Clear();
+        slots.AddRange(newSlots);
+        toolbarSlots = newSlots;
+        Debug.Log($"InventoryManager: Registered {slots.Count} slots");
+    }
+
+    public void SetSelectedSlot(int index)
+    {
+        if (index < 0 || index >= slots.Count) return;
+        selectedSlotIndex = index;
+    }
+
+    // Returns the item in the currently selected slot
+    public Item GetSelectedItem()
+    {
+        if (toolbarSlots == null || selectedSlotIndex >= toolbarSlots.Length) return null;
+        InventoryItem item = toolbarSlots[selectedSlotIndex].GetComponentInChildren<InventoryItem>();
+        return item != null ? item.item : null;
+    }
+
+    // Returns the InventoryItem component in the selected slot
+    public InventoryItem GetSelectedInventoryItem()
+    {
+        if (toolbarSlots == null || selectedSlotIndex >= toolbarSlots.Length) return null;
+        return toolbarSlots[selectedSlotIndex].GetComponentInChildren<InventoryItem>();
     }
 
     public bool AddItem(Item item, int amount = 1)
     {
-        Debug.Log($"InventoryManager: Adding item {item?.name}, amount: {amount}, stackable: {item?.stackable}");
-
         if (item == null)
         {
             Debug.LogError("InventoryManager: Item is null!");
             return false;
         }
 
-        if (item.stackable)
+        Debug.Log($"InventoryManager: Trying to add {item.name} x{amount}, slots available: {slots.Count}");
+
+        // Try stacking into existing slot first
+        foreach (InventorySlot slot in slots)
         {
-            if (inventory.ContainsKey(item))
+            InventoryItem existing = slot.GetComponentInChildren<InventoryItem>();
+            if (existing != null && existing.item == item && existing.CanStack(amount))
             {
-                int oldCount = inventory[item];
-                inventory[item] += amount;
-                Debug.Log($"InventoryManager: Added {amount} to existing stack, old total: {oldCount}, new total: {inventory[item]}");
-            }
-            else
-            {
-                inventory[item] = amount;
-                Debug.Log($"InventoryManager: Added new stack with {amount} items");
-            }
-        }
-        else
-        {
-            // For non-stackable items, add multiple entries
-            for (int i = 0; i < amount; i++)
-            {
-                inventory[item] = 1; // This is simplistic, might need better handling
-                Debug.Log($"InventoryManager: Added non-stackable item");
+                existing.AddAmount(amount);
+                Debug.Log($"InventoryManager: Stacked {item.name}");
+                return true;
             }
         }
 
-        UpdateToolbarUI();
-        return true;
-    }
-
-    public bool RemoveItem(Item item, int amount = 1)
-    {
-        if (inventory.ContainsKey(item))
+        // Find empty slot
+        foreach (InventorySlot slot in slots)
         {
-            inventory[item] -= amount;
-            if (inventory[item] <= 0)
+            InventoryItem existing = slot.GetComponentInChildren<InventoryItem>();
+            if (existing == null)
             {
-                inventory.Remove(item);
+                SpawnItem(item, amount, slot.transform);
+                Debug.Log($"InventoryManager: Placed {item.name} in slot {slot.name}");
+                return true;
             }
-            UpdateToolbarUI();
-            return true;
         }
+
+        Debug.LogWarning($"InventoryManager: All {slots.Count} slots full!");
         return false;
     }
 
-    public bool HasItem(Item item, int amount = 1)
+    private void SpawnItem(Item item, int amount, Transform slot)
     {
-        return inventory.ContainsKey(item) && inventory[item] >= amount;
-    }
-
-    public int GetItemCount(Item item)
-    {
-        return inventory.ContainsKey(item) ? inventory[item] : 0;
-    }
-
-    private void UpdateToolbarUI()
-    {
-        Debug.Log($"InventoryManager: Updating toolbar UI, inventory count: {inventory.Count}, toolbar slots: {toolbarSlots?.Length ?? 0}");
-
-        if (toolbarSlots == null || toolbarSlots.Length == 0)
+        if (inventoryItemPrefab == null)
         {
-            Debug.LogWarning("InventoryManager: No toolbar slots assigned!");
+            Debug.LogError("InventoryManager: inventoryItemPrefab is not assigned!");
             return;
         }
 
-        // Simple toolbar update - assign first few items to slots
-        int slotIndex = 0;
-        foreach (var kvp in inventory)
-        {
-            if (slotIndex >= toolbarSlots.Length) break;
+        GameObject itemObj = Instantiate(inventoryItemPrefab, slot);
+        InventoryItem inventoryItem = itemObj.GetComponent<InventoryItem>();
 
-            Debug.Log($"InventoryManager: Setting slot {slotIndex} with item {kvp.Key.name}, count: {kvp.Value}");
-            toolbarSlots[slotIndex].SetItem(kvp.Key, kvp.Value);
-            slotIndex++;
+        if (inventoryItem == null)
+        {
+            Debug.LogError("InventoryManager: InventoryItem component missing from prefab!");
+            return;
+        }
+        if (inventoryItem.itemImage == null)
+        {
+            Debug.LogError("InventoryManager: itemImage not assigned on prefab!");
+            return;
         }
 
-        // Clear remaining slots
-        for (int i = slotIndex; i < toolbarSlots.Length; i++)
-        {
-            Debug.Log($"InventoryManager: Clearing slot {i}");
-            toolbarSlots[i].ClearSlot();
-        }
-    }
-
-    public Item GetSelectedItem()
-    {
-        // For now, return the first item. Later can add selection logic
-        foreach (var kvp in inventory)
-        {
-            return kvp.Key;
-        }
-        return null;
+        inventoryItem.Initialize(item, amount);
     }
 }
