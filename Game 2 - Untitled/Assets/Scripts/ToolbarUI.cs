@@ -63,16 +63,17 @@ public class ToolbarUI : MonoBehaviour
     }
 
     private void HandleScrollInput()
-    {
-        if (Mouse.current == null) return;
+{
+    if (Mouse.current == null) return;
+    if (slots == null || slots.Length == 0) return; // <-- Add this guard
 
-        float scroll = Mouse.current.scroll.ReadValue().y;
+    float scroll = Mouse.current.scroll.ReadValue().y;
 
-        if (scroll > 0f)
-            SelectSlot((selectedIndex - 1 + slots.Length) % slots.Length);
-        else if (scroll < 0f)
-            SelectSlot((selectedIndex + 1) % slots.Length);
-    }
+    if (scroll > 0f)
+        SelectSlot((selectedIndex - 1 + slots.Length) % slots.Length);
+    else if (scroll < 0f)
+        SelectSlot((selectedIndex + 1) % slots.Length);
+}
 
     public void SelectSlot(int index)
     {

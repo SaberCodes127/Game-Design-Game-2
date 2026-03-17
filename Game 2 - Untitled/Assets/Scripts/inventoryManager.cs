@@ -63,6 +63,26 @@ public class InventoryManager : MonoBehaviour
             Debug.LogError("InventoryManager: Item is null!");
             return false;
         }
+        // Auto-find slots if none registered yet
+    if (slots.Count == 0)
+    {
+        ToolbarUI toolbar = FindObjectOfType<ToolbarUI>();
+        if (toolbar != null)
+        {
+            InventorySlot[] found = toolbar.GetComponentsInChildren<InventorySlot>();
+            if (found.Length > 0)
+            {
+                RegisterSlots(found);
+                Debug.Log($"InventoryManager: Auto-registered {found.Length} slots");
+            }
+        }
+    }
+
+    if (slots.Count == 0)
+    {
+        Debug.LogError("InventoryManager: Still no slots found! Make sure ToolbarUI exists in the scene.");
+        return false;
+    }
 
         Debug.Log($"InventoryManager: Trying to add {item.name} x{amount}, slots available: {slots.Count}");
 
